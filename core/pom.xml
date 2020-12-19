@@ -412,6 +412,12 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- For Cluster Profiler -->
+    <dependency>
+      <groupId>com.influxdb</groupId>
+      <artifactId>influxdb-client-java</artifactId>
+      <version>1.8.0</version>
+    </dependency>
   </dependencies>
   <build>
     <outputDirectory>target/scala-${scala.binary.version}/classes</outputDirectory>

@@ -44,6 +44,7 @@ import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.{StorageLevel, TaskResultBlockId}
 import org.apache.spark.util._
 import org.apache.spark.util.io.ChunkedByteBuffer
+import org.apache.spark.util.profiler.ClusterProfiler
 
 /**
  * Spark executor, backed by a threadpool to run tasks.
@@ -198,6 +199,11 @@ private[spark] class Executor(
 
   startDriverHeartbeater()
 
+  ClusterProfiler.startProfiling(
+    env.conf.getOption("spark.app.id").getOrElse(s"app-${System.currentTimeMillis()}"),
+    executorHostname,
+    executorId)
+
   private[executor] def numRunningTasks: Int = runningTasks.size()
 
   def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
@@ -244,6 +250,10 @@ private[spark] class Executor(
   }
 
   def stop(): Unit = {
+    ClusterProfiler.stopProfiling(
+      env.conf.getOption("spark.app.id").getOrElse(s"app-${System.currentTimeMillis()}"),
+      executorHostname,
+      executorId)
     env.metricsSystem.report()
     heartbeater.shutdown()
     heartbeater.awaitTermination(10, TimeUnit.SECONDS)

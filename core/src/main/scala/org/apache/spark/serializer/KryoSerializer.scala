@@ -43,6 +43,7 @@ import org.apache.spark.scheduler.{CompressedMapStatus, HighlyCompressedMapStatu
 import org.apache.spark.storage._
 import org.apache.spark.util.{BoundedPriorityQueue, ByteBufferInputStream, SerializableConfiguration, SerializableJobConf, Utils}
 import org.apache.spark.util.collection.CompactBuffer
+import org.apache.spark.util.profiler.ClusterProfiler
 
 /**
  * A Spark serializer that uses the <a href="https://code.google.com/p/kryo/">
@@ -242,7 +243,12 @@ class KryoSerializationStream(
   private[this] var kryo: Kryo = serInstance.borrowKryo()
 
   override def writeObject[T: ClassTag](t: T): SerializationStream = {
-    kryo.writeClassAndObject(output, t)
+    ClusterProfiler.time(
+      () => kryo.writeClassAndObject(output, t),
+      Map(
+        "function" -> "Serialization"
+      )
+    )
     this
   }
 
@@ -279,7 +285,12 @@ class KryoDeserializationStream(
 
   override def readObject[T: ClassTag](): T = {
     try {
-      kryo.readClassAndObject(input).asInstanceOf[T]
+      ClusterProfiler.time(
+        () => kryo.readClassAndObject(input).asInstanceOf[T],
+        Map(
+          "function" -> "Deserialization"
+        )
+      )
     } catch {
       // DeserializationStream uses the EOF exception to indicate stopping condition.
       case e: KryoException

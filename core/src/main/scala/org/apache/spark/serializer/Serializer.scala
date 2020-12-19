@@ -136,9 +136,7 @@ abstract class SerializationStream extends Closeable {
   override def close(): Unit
 
   def writeAll[T: ClassTag](iter: Iterator[T]): SerializationStream = {
-    while (iter.hasNext) {
-      writeObject(iter.next())
-    }
+    writeObject(iter.next())
     this
   }
 }

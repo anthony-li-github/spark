@@ -33,6 +33,7 @@ import org.apache.spark.network.util.TransportConf
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.util.Utils
 import org.apache.spark.util.io.ChunkedByteBufferOutputStream
+import org.apache.spark.util.profiler.ClusterProfiler
 
 /**
  * An iterator that fetches multiple blocks. For local blocks, it fetches from the local block
@@ -241,6 +242,14 @@ final class ShuffleBlockFetcherIterator(
             logDebug("remainingBlocks: " + remainingBlocks)
           }
         }
+        ClusterProfiler.reportEvent(Map(
+          "function" -> "Shuffle Data Transmission",
+          "remoteHost" -> address.host,
+          "remotePort" -> address.port.toString,
+          "remoteExecutorId" -> address.executorId,
+          "blockId" -> blockId,
+          "size" -> buf.size().toString
+        ), org.apache.spark.util.profiler.Reporter.SUCCESS)
         logTrace("Got remote block " + blockId + " after " + Utils.getUsedTimeMs(startTime))
       }
 
@@ -249,6 +258,14 @@ final class ShuffleBlockFetcherIterator(
         results.put(new FailureFetchResult(BlockId(blockId), address, e))
       }
     }
+
+    ClusterProfiler.reportEvent(Map(
+      "function" -> "Shuffle Data Transmission",
+      "remoteHost" -> address.host,
+      "remotePort" -> address.port.toString,
+      "remoteExecutorId" -> address.executorId,
+      "blockIds" -> blockIds.mkString(",")
+    ), org.apache.spark.util.profiler.Reporter.START)
 
     // Fetch remote shuffle blocks to disk when the request is too large. Since the shuffle data is
     // already encrypted and compressed over the wire(w.r.t. the related configs), we can just fetch

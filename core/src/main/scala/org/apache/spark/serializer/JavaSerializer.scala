@@ -24,6 +24,7 @@ import scala.reflect.ClassTag
 
 import org.apache.spark.SparkConf
 import org.apache.spark.annotation.DeveloperApi
+import org.apache.spark.util.profiler.ClusterProfiler
 import org.apache.spark.util.{ByteBufferInputStream, ByteBufferOutputStream, Utils}
 
 private[spark] class JavaSerializationStream(
@@ -40,7 +41,12 @@ private[spark] class JavaSerializationStream(
    */
   def writeObject[T: ClassTag](t: T): SerializationStream = {
     try {
-      objOut.writeObject(t)
+      ClusterProfiler.time(
+        () => objOut.writeObject(t),
+        Map(
+          "function" -> "Serialization"
+        )
+      )
     } catch {
       case e: NotSerializableException if extraDebugInfo =>
         throw SerializationDebugger.improveException(t, e)
@@ -72,7 +78,14 @@ private[spark] class JavaDeserializationStream(in: InputStream, loader: ClassLoa
       }
   }
 
-  def readObject[T: ClassTag](): T = objIn.readObject().asInstanceOf[T]
+  def readObject[T: ClassTag](): T = {
+    ClusterProfiler.time(
+      () => objIn.readObject().asInstanceOf[T],
+      Map(
+        "function" -> "Deserialization"
+      )
+    )
+  }
   def close() { objIn.close() }
 }
 
